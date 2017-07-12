@@ -4,6 +4,7 @@ import gym
 import tensorflow as tf
 import numpy as np
 import random
+import os
 from collections import deque
 
 '''
@@ -39,6 +40,7 @@ class Environment:
 智能体类
 '''
 
+
 class Agent:
 
     def __init__(self, sess):
@@ -51,6 +53,9 @@ class Agent:
         self.session = sess
         self.create_q_network()
         self.create_train_method()
+        self.saver = tf.train.Saver()
+        self.start_idx = 0
+
 
     '''
        决策，根据状态计算Q值，选择最大Q值的动作输出，同时，该动作有一定的随机性
@@ -133,7 +138,22 @@ class Agent:
     def bias_variable(self, shape):
         initial = tf.constant(0.01, shape=shape)
         return tf.Variable(initial)
+    '''
+    保存网络模型
+    '''
+    def save_model(self, path, step):
+        model_name = os.path.join(path, 'cartpole.ckpt')
+        self.saver.save(self.session, model_name, global_step=step)
+        return 0
 
+    '''
+    载入网络模型
+    '''
+    def load_model(self, path):
+        ckpt = tf.train.get_checkpoint_state(checkpoint_dir=path)
+        if ckpt and ckpt.model_checkpoint_path:
+            self.saver.restore(self.session, ckpt.model_checkpoint_path)
+            self.start_idx=ckpt.model_checkpoint_path.split('/')[-1].split('-')[-1]
 
 '''
 主函数
@@ -145,7 +165,8 @@ def main():
     env = Environment(sess)
     agent = Agent(sess)
     sess.run(tf.global_variables_initializer())
-    for t in range(MAX_TIMES):
+    agent.load_model('model')
+    for t in range(int(agent.start_idx), MAX_TIMES):
         cur_state = env.restart()
         score = 0
         for step in range(MAX_STEP):
@@ -163,6 +184,8 @@ def main():
             if done:
                 break;
         print("t = ", t, " Score = ", score)
+        if t % 10000 == 0:
+            agent.save_model('model', t)
     sess.close()
     return 0
 
