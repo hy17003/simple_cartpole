@@ -49,7 +49,7 @@ class Agent:
         self.state_dim = 4
         self.action_dim = 2
         self.epsilon = 0.1
-        self.batch_size = 10
+        self.batch_size = 32
         self.session = sess
         self.create_q_network()
         self.create_train_method()
@@ -165,6 +165,7 @@ class Agent:
 '''
 主函数
 '''
+
 MAX_TIMES = 100000
 MAX_STEP = 300
 def main(stage):
@@ -184,7 +185,7 @@ def main(stage):
                 next_state, reward, done = env.step(action)
                 score = score + reward
                 # 显示画面
-                if(t > 3000):
+                if(t > 7000):
                     env.show()
                 #智能体感知这些反馈
                 agent.perceive(cur_state, action, reward, next_state, done)
@@ -193,7 +194,7 @@ def main(stage):
                 if done:
                     break;
             print("t = ", t, " Score = ", score)
-            if t % 2000 == 0:
+            if t % 500 == 0:
                 agent.save_model('model', t)
     else:
         for t in range(100):
@@ -217,4 +218,4 @@ def main(stage):
     sess.close()
 
 if __name__ == '__main__':
-  main('TEST')
+  main('TRAIN')
