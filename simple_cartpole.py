@@ -48,7 +48,7 @@ class Agent:
         self.max_buffer = 10000
         self.state_dim = 4
         self.action_dim = 2
-        self.epsilon = 0.2
+        self.epsilon = 0.1
         self.batch_size = 10
         self.session = sess
         self.create_q_network()
@@ -58,15 +58,22 @@ class Agent:
 
 
     '''
-       决策，根据状态计算Q值，选择最大Q值的动作输出，同时，该动作有一定的随机性
-       '''
+    决策，根据状态计算Q值，选择最大Q值的动作输出，同时，该动作有一定的随机性
+    '''
 
-    def get_action(self, state):
+    def get_greedy_action(self, state):
         q_value = self.session.run(self.q_value, feed_dict={self.state_input: [state]})
         if random.random() <= self.epsilon:
             return random.randint(0, self.action_dim - 1)
         else:
             return np.argmax(q_value[0])
+
+    '''
+    决策，根据状态计算Q值，选择最大Q值的动作输出
+    '''
+    def get_action(self, state):
+        q_value = self.session.run(self.q_value, feed_dict={self.state_input: [state]})
+        return np.argmax(q_value[0])
 
     '''
     感知环境，保存游戏返回的状态及奖励等信息
@@ -160,34 +167,54 @@ class Agent:
 '''
 MAX_TIMES = 100000
 MAX_STEP = 300
-def main():
+def main(stage):
     sess = tf.Session()
     env = Environment(sess)
     agent = Agent(sess)
     sess.run(tf.global_variables_initializer())
     agent.load_model('model')
-    for t in range(int(agent.start_idx), MAX_TIMES):
-        cur_state = env.restart()
-        score = 0
-        for step in range(MAX_STEP):
-            #根据当前状态，智能体作出一种动作
-            action = agent.get_action(cur_state)
-            #执行这种动作，获得环境反馈
-            next_state, reward, done = env.step(action)
-            score = score + reward
-            # 显示画面
-            env.show()
-            #智能体感知这些反馈
-            agent.perceive(cur_state, action, reward, next_state, done)
-            #更新环境状态
-            cur_state = next_state
-            if done:
-                break;
-        print("t = ", t, " Score = ", score)
-        if t % 10000 == 0:
-            agent.save_model('model', t)
+    if(stage == 'TRAIN'):
+        for t in range(int(agent.start_idx), MAX_TIMES):
+            cur_state = env.restart()
+            score = 0
+            for step in range(MAX_STEP):
+                #根据当前状态，智能体作出一种动作
+                action = agent.get_greedy_action(cur_state)
+                #执行这种动作，获得环境反馈
+                next_state, reward, done = env.step(action)
+                score = score + reward
+                # 显示画面
+                if(t > 3000):
+                    env.show()
+                #智能体感知这些反馈
+                agent.perceive(cur_state, action, reward, next_state, done)
+                #更新环境状态
+                cur_state = next_state
+                if done:
+                    break;
+            print("t = ", t, " Score = ", score)
+            if t % 2000 == 0:
+                agent.save_model('model', t)
+    else:
+        for t in range(100):
+            cur_state = env.restart()
+            score = 0
+            for step in range(MAX_STEP):
+                # 根据当前状态，智能体作出一种动作
+                action = agent.get_action(cur_state)
+                # 执行这种动作，获得环境反馈
+                next_state, reward, done = env.step(action)
+                score = score + reward
+                # 显示画面
+                env.show()
+                # 智能体感知这些反馈
+                agent.perceive(cur_state, action, reward, next_state, done)
+                # 更新环境状态
+                cur_state = next_state
+                if done:
+                    break;
+            print("t = ", t, " Score = ", score)
     sess.close()
-    return 0
 
 if __name__ == '__main__':
-  main()
+  main('TEST')
